@@ -1,0 +1,30 @@
+# Node modules folder (never format)
+node_modules/
+
+# Build / output folders
+dist/
+build/
+.next/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# Git files
+.git/
+
+# Package lock files (optional)
+package-lock.json
+yarn.lock
+
+# Coverage reports (if using testing)
+coverage/
+
+# IDE/editor specific folders (optional)
+.vscode/
+.idea/
