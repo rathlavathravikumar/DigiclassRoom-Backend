@@ -67,6 +67,9 @@ import  adminRouter  from './routes/admin.route.js'
 import courseRoute from './routes/course.route.js'
 import assignmentsRoute from './routes/assignments.route.js'
 import testsRoute from './routes/tests.route.js'
+import marksRoute from './routes/marks.route.js'
+import noticesPublicRoute from './routes/notices.route.js'
+import submissionsRoute from './routes/submissions.route.js'
   
 app.use("/healthcheck",healthcheckRouter)
 app.use("/upload",uploadsRoute)
@@ -76,6 +79,9 @@ app.use("/api/v1/student",studentRouter)
 app.use("/api/v1/courses", courseRoute)
 app.use("/api/v1/assignments", assignmentsRoute)
 app.use("/api/v1/tests", testsRoute)
+app.use("/api/v1/marks", marksRoute)
+app.use("/api/v1/notices", noticesPublicRoute)
+app.use("/api/v1/submissions", submissionsRoute)
 
 app.get('/',(req,res)=>{
     res.status(200).send("welcome to DigLibrary")
