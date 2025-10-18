@@ -4,21 +4,21 @@ import { Apiresponse } from "../utils/Apiresponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const register = asyncHandler(async (req, res) => {
-  const { name, email, password, class_id } = req.body || {};
-  if (!name || !email || !password || !class_id)
+  const { name, email, password, clg_id, admin_id } = req.body || {};
+  if (!name || !email || !password || !clg_id || !admin_id)
     throw new ApiErrorResponse(400, "Missing required fields");
 
   const existing = await Student.findOne({ email });
   if (existing) throw new ApiErrorResponse(409, "Email already registered");
 
-  const student = await Student.create({ name, email, password, class_id });
+  const student = await Student.create({ name, email, password, clg_id, admin_id });
   const accessToken = student.generateAccessToken();
   const refreshToken = student.generateRefreshToken();
   student.refreshToken = refreshToken;
   await student.save({ validateBeforeSave: false });
 
   return res.status(201).json(
-    new Apiresponse(201, { student: { _id: student._id, name, email, class_id }, accessToken, refreshToken }, "Registered")
+    new Apiresponse(201, { student: { _id: student._id, name, email, clg_id }, accessToken, refreshToken }, "Registered")
   );
 });
 

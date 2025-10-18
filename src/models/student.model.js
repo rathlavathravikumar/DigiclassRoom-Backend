@@ -1,11 +1,10 @@
-
 /*
 student[icon:student]{
   _id string pk
   name string
   email string
   password string
-  class_id object class
+  admin_id object admin
   refreshToken string
   createdAt date
   updatedAt date
@@ -32,16 +31,24 @@ const studentSchema=new Schema({
         required : true,
         trim : true
     },
-    class_id:{
-        type : Schema.Types.ObjectId,
-        ref : "Class",
-        required : true
+    clg_id: {
+        type: String,
+        trim: true,
+        required: true
+    },
+    admin_id: {
+        type: Schema.Types.ObjectId,
+        ref: "Admin",
+        required: true
     },
     refreshToken :{
         type : String,
     }
 }, {timestamps :true}
 )
+
+// Unique clg_id per admin
+studentSchema.index({ admin_id: 1, clg_id: 1 }, { unique: true });
 
 studentSchema.pre("save",async function(next){ //HOOKS
     if(!this.isModified("password")) return next()

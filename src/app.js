@@ -4,10 +4,31 @@ import { errorHandler } from './middlewares/error.middleware.js'
 
 const app=express()
 
-const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || process.env.cors_ORIGIN || 'http://localhost:8080';
+const ORIGINS_ENV = process.env.CORS_ORIGIN || process.env.cors_ORIGIN || '';
+const DEFAULT_ORIGINS = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:8080',
+  'http://127.0.0.1:8080',
+];
+const ORIGIN_LIST = (
+  ORIGINS_ENV
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+);
+
+const ALLOWED_ORIGINS = ORIGIN_LIST.length ? ORIGIN_LIST : DEFAULT_ORIGINS;
+
 app.use(cors({
-    origin: ALLOWED_ORIGIN,
-    credentials: true
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
 }));
 
 
