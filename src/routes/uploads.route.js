@@ -6,7 +6,7 @@ import { Submission } from "../models/submissions.model.js";
 
 const router=Router();
 
-router.route("/").post(upload.single("Upload File"),async (req,res)=>{
+router.route("/").post(upload.single("File"),async (req,res)=>{
     const filePath=req.file.path
     if(!filePath) res.status(404).send("file not found")
     try{

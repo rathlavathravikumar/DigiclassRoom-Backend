@@ -5,7 +5,7 @@ import { Apiresponse } from "../utils/Apiresponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const createTest = asyncHandler(async (req, res) => {
-  const { title, description, scheduled_at, course_id, duration_minutes, total_marks, questions } = req.body || {};
+  const { title, description, scheduled_at, course_id, duration_minutes, questions } = req.body || {};
   if (!title || !scheduled_at || !course_id)
     throw new ApiErrorResponse(400, "Missing required fields");
 
@@ -17,8 +17,8 @@ const createTest = asyncHandler(async (req, res) => {
     course_id,
     teacher_id,
     duration_minutes: Number(duration_minutes) || 60,
-    total_marks: Number(total_marks) || 100,
     questions: Array.isArray(questions) ? questions : [],
+    // total_marks will be auto-calculated from question marks in pre-save middleware
   };
   const test = await Test.create(payload);
   return res.status(201).json(new Apiresponse(201, test, "Test created"));
@@ -57,28 +57,50 @@ const deleteTest = asyncHandler(async (req, res) => {
 
 export { createTest, listTests, getTest, updateTest, deleteTest };
 
-// Student submits answers, compute score and store in Marks
+// Student submits answers, compute score based on per-question marks and store in Marks
 const submitTest = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { answers } = req.body || {};
   if (!Array.isArray(answers)) throw new ApiErrorResponse(400, "answers must be an array");
   const test = await Test.findById(id).lean();
   if (!test) throw new ApiErrorResponse(404, "Test not found");
+  
   const totalQuestions = (test.questions || []).length;
-  let correct = 0;
+  let correctCount = 0;
+  let earnedMarks = 0;
+  
   (test.questions || []).forEach((q, idx) => {
     const ans = answers[idx];
     // answers may be 'A'|'B'|'C'|'D' or option index 0..3
     const asLetter = typeof ans === 'number' ? ['A','B','C','D'][ans] : ans;
-    if (asLetter === q.correct) correct += 1;
+    if (asLetter === q.correct) {
+      correctCount += 1;
+      earnedMarks += q.marks || 0; // Add marks for this correct answer
+    }
   });
-  const scoreScaled = totalQuestions > 0 ? Math.round((correct / totalQuestions) * (test.total_marks || 100)) : 0;
+  
+  const maxMarks = test.total_marks || 0;
   const doc = await Marks.findOneAndUpdate(
     { type: 'test', ref_id: id, student_id: req.user._id },
-    { $set: { type: 'test', ref_id: id, student_id: req.user._id, score: scoreScaled, max_score: test.total_marks || 100, course_id: test.course_id, remarks: '' } },
+    { $set: { 
+      type: 'test', 
+      ref_id: id, 
+      student_id: req.user._id, 
+      score: earnedMarks, 
+      max_score: maxMarks, 
+      course_id: test.course_id, 
+      remarks: `${correctCount}/${totalQuestions} correct` 
+    }},
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
-  return res.status(200).json(new Apiresponse(200, { correct, totalQuestions, score: scoreScaled, max_score: test.total_marks || 100, marks: doc }, 'Submitted'));
+  
+  return res.status(200).json(new Apiresponse(200, { 
+    correct: correctCount, 
+    totalQuestions, 
+    score: earnedMarks, 
+    max_score: maxMarks, 
+    marks: doc 
+  }, 'Submitted'));
 });
 
 export { submitTest };

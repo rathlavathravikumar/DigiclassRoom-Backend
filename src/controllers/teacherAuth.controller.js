@@ -4,21 +4,21 @@ import { Apiresponse } from "../utils/Apiresponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const register = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body || {};
-  if (!name || !email || !password)
+  const { name, email, password, clg_id, admin_id } = req.body || {};
+  if (!name || !email || !password || !admin_id)
     throw new ApiErrorResponse(400, "Missing required fields");
 
   const existing = await Teacher.findOne({ email });
   if (existing) throw new ApiErrorResponse(409, "Email already registered");
 
-  const teacher = await Teacher.create({ name, email, password, courses_taught: [] });
+  const teacher = await Teacher.create({ name, email, password, clg_id: clg_id || "", admin_id, courses_taught: [] });
   const accessToken = teacher.generateAccessToken();
   const refreshToken = teacher.generateRefreshToken();
   teacher.refreshToken = refreshToken;
   await teacher.save({ validateBeforeSave: false });
 
   return res.status(201).json(
-    new Apiresponse(201, { teacher: { _id: teacher._id, name, email }, accessToken, refreshToken }, "Registered")
+    new Apiresponse(201, { teacher: { _id: teacher._id, name, email, clg_id }, accessToken, refreshToken }, "Registered")
   );
 });
 
@@ -26,7 +26,7 @@ const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) throw new ApiErrorResponse(400, "Missing credentials");
 
-  const teacher = await Teacher.findOne({ email });
+  const teacher = await Teacher.findOne({ email }).populate("admin_id", "name email").populate("courses_taught");
   if (!teacher) throw new ApiErrorResponse(401, "Invalid credentials");
 
   const ok = await teacher.isCurrentPassword(password);
@@ -37,7 +37,7 @@ const login = asyncHandler(async (req, res) => {
   teacher.refreshToken = refreshToken;
   await teacher.save({ validateBeforeSave: false });
 
-  return res.status(200).json(new Apiresponse(200, { accessToken, refreshToken }, "Logged in"));
+  return res.status(200).json(new Apiresponse(200, { teacher: { _id: teacher._id, name: teacher.name, email: teacher.email, clg_id: teacher.clg_id }, accessToken, refreshToken }, "Logged in"));
 });
 
 const refresh = asyncHandler(async (req, res) => {
