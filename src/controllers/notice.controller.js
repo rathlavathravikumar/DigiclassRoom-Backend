@@ -6,8 +6,15 @@ const createNotice = async (req, res) => {
   try {
     const adminId = req.user?._id;
     const { title, content, priority, target } = req.body;
+    
+    console.log('Creating notice with data:', { title, content, priority, target, adminId });
+    
     if (!title || !content || !priority || !target) {
-      throw new ApiErrorResponse(404, "values are empty");
+      return res.status(400).json(new ApiErrorResponse(400, "Missing required fields: title, content, priority, and target are required"));
+    }
+
+    if (!adminId) {
+      return res.status(401).json(new ApiErrorResponse(401, "Admin authentication required"));
     }
 
     const notice = await Notice.create({
@@ -18,10 +25,11 @@ const createNotice = async (req, res) => {
       admin_id: adminId,
     });
 
-    res.status(201).send(new Apiresponse(201, notice, "successfully notice uploaded"));
+    console.log('Notice created successfully:', notice._id);
+    return res.status(201).json(new Apiresponse(201, notice, "Notice created successfully"));
   } catch (error) {
-    console.log("failed to createNotice:", error.message);
-    throw new ApiErrorResponse(500, "failed to createNotice");
+    console.error("Failed to create notice:", error);
+    return res.status(500).json(new ApiErrorResponse(500, `Failed to create notice: ${error.message}`));
   }
 };
 

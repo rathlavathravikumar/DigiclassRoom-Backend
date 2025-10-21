@@ -271,3 +271,114 @@ export const getStudentAttendance = async (req, res) => {
     });
   }
 };
+
+// Get attendance summary for all students in a course (for student dashboard)
+export const getAttendanceSummary = async (req, res) => {
+  try {
+    const { course_id, month } = req.query;
+    const user_id = req.user._id;
+    const user_role = req.user.role;
+
+    if (!course_id) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: "Missing required query parameter: course_id",
+        data: null,
+      });
+    }
+
+    // Verify the course exists
+    const course = await Course.findById(course_id);
+    if (!course) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: "Course not found",
+        data: null,
+      });
+    }
+
+    // For students, only allow access to their own data
+    // For teachers, allow access to their course data
+    if (user_role === 'teacher' && course.teacher_id.toString() !== user_id.toString()) {
+      return res.status(403).json({
+        statusCode: 403,
+        message: "You can only view attendance for your own courses",
+        data: null,
+      });
+    }
+
+    // Build date filter for month if provided
+    let dateFilter = {};
+    if (month) {
+      const [year, monthNum] = month.split('-');
+      const startDate = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
+      const endDate = new Date(parseInt(year), parseInt(monthNum), 0);
+      dateFilter = {
+        date: {
+          $gte: startDate,
+          $lte: endDate
+        }
+      };
+    }
+
+    // Get all attendance records for this course
+    const attendanceRecords = await Attendance.find({
+      course_id,
+      ...dateFilter
+    }).populate("records.student_id", "name email clg_id");
+
+    // Calculate summary for each student
+    const studentSummary = {};
+
+    attendanceRecords.forEach((record) => {
+      record.records.forEach((studentRecord) => {
+        const student = studentRecord.student_id;
+        const studentId = student._id.toString();
+
+        if (!studentSummary[studentId]) {
+          studentSummary[studentId] = {
+            student: {
+              _id: student._id,
+              name: student.name,
+              email: student.email,
+              clg_id: student.clg_id
+            },
+            present: 0,
+            absent: 0,
+            total: 0
+          };
+        }
+
+        if (studentRecord.status === "present") {
+          studentSummary[studentId].present++;
+        } else if (studentRecord.status === "absent") {
+          studentSummary[studentId].absent++;
+        }
+        studentSummary[studentId].total++;
+      });
+    });
+
+    // Convert to array and filter for students if user is a student
+    let summaryArray = Object.values(studentSummary);
+    
+    if (user_role === 'student') {
+      summaryArray = summaryArray.filter(summary => 
+        summary.student._id.toString() === user_id.toString()
+      );
+    }
+
+    return res.status(200).json({
+      statusCode: 200,
+      message: "Attendance summary retrieved successfully",
+      data: summaryArray,
+    });
+  } catch (error) {
+    logger.error(`Error retrieving attendance summary: ${error.message}`);
+    return res.status(500).json({
+      statusCode: 500,
+      message: "Error retrieving attendance summary",
+      data: null,
+      error: error.message,
+    });
+  }
+};

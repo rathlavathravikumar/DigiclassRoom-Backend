@@ -7,6 +7,7 @@ import { Teacher } from "../models/teacher.model.js";
 import { Student } from "../models/student.model.js";
 import { Test } from "../models/tests.model.js";
 import { Resource } from "../models/resources.model.js";
+import { Discussion } from "../models/discussion.model.js";
 import { fileUpload } from "../utils/cloudinary.js";
 
 // Resolve the tenant adminId based on the requester role
@@ -439,10 +440,18 @@ const getCourseDiscussions = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const adminId = await resolveAdminId(req);
   
-  // For now, return empty array - this would be implemented with a discussions model
-  const discussions = [];
+  // Verify the course exists and user has access
+  const course = await Course.findOne({ _id: id, admin_id: adminId });
+  if (!course) {
+    throw new ApiErrorResponse(404, "Course not found");
+  }
   
-  return res.status(200).json(new Apiresponse(200, discussions, "OK"));
+  // Fetch discussions for this course, sorted by creation date (newest first)
+  const discussions = await Discussion.find({ course_id: id })
+    .sort({ createdAt: -1 })
+    .lean();
+  
+  return res.status(200).json(new Apiresponse(200, discussions, "Discussions retrieved successfully"));
 });
 
 const postCourseDiscussion = asyncHandler(async (req, res) => {
@@ -450,20 +459,48 @@ const postCourseDiscussion = asyncHandler(async (req, res) => {
   const { message } = req.body;
   const adminId = await resolveAdminId(req);
   
-  // For now, return mock discussion - this would be implemented with discussions model
-  const discussion = {
-    _id: new mongoose.Types.ObjectId(),
-    message,
+  // Validate input
+  if (!message || !message.trim()) {
+    throw new ApiErrorResponse(400, "Message is required");
+  }
+  
+  // Verify the course exists and user has access
+  const course = await Course.findOne({ _id: id, admin_id: adminId });
+  if (!course) {
+    throw new ApiErrorResponse(404, "Course not found");
+  }
+  
+  // Get user name based on role
+  let userName = "User";
+  try {
+    if (req.user.role === "teacher") {
+      const teacher = await Teacher.findById(req.user._id).select("name");
+      userName = teacher?.name || "Teacher";
+    } else if (req.user.role === "student") {
+      const student = await Student.findById(req.user._id).select("name");
+      userName = student?.name || "Student";
+    } else if (req.user.role === "admin") {
+      userName = "Admin";
+    }
+  } catch (error) {
+    // Fallback to default name if user lookup fails
+    userName = req.user.role === "teacher" ? "Teacher" : req.user.role === "student" ? "Student" : "Admin";
+  }
+  
+  // Create and save the discussion
+  const discussion = new Discussion({
+    course_id: id,
+    message: message.trim(),
     author: {
       _id: req.user._id,
-      name: "User",
+      name: userName,
       role: req.user.role
-    },
-    created_at: new Date().toISOString(),
-    replies: []
-  };
+    }
+  });
   
-  return res.status(201).json(new Apiresponse(201, discussion, "Discussion posted"));
+  await discussion.save();
+  
+  return res.status(201).json(new Apiresponse(201, discussion, "Discussion posted successfully"));
 });
 
 // Get student's enrolled courses

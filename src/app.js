@@ -10,6 +10,20 @@ const DEFAULT_ORIGINS = [
   'http://127.0.0.1:5173',
   'http://localhost:8080',
   'http://127.0.0.1:8080',
+  'http://localhost:8081',
+  'http://127.0.0.1:8081',
+  'http://localhost:8084',
+  'http://127.0.0.1:8084',
+  'http://localhost:8085',
+  'http://127.0.0.1:8085',
+  'http://127.0.0.1:42709',
+  'http://localhost:42709',
+  'http://127.0.0.1:41491',
+  'http://localhost:41491',
+  'http://127.0.0.1:38017',
+  'http://localhost:38017',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
 ];
 const ORIGIN_LIST = (
   ORIGINS_ENV
@@ -22,13 +36,19 @@ const ALLOWED_ORIGINS = ORIGIN_LIST.length ? ORIGIN_LIST : DEFAULT_ORIGINS;
 
 app.use(cors({
   origin: function (origin, callback) {
+    console.log('CORS request from origin:', origin);
+    console.log('Allowed origins:', ALLOWED_ORIGINS);
+    
     if (!origin) return callback(null, true);
     if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
       return callback(null, true);
     }
+    console.log('Origin not allowed:', origin);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
 
 
@@ -72,6 +92,8 @@ import noticesPublicRoute from './routes/notices.route.js'
 import submissionsRoute from './routes/submissions.route.js'
 import meetingRoute from './routes/meeting.route.js'
 import attendanceRoute from './routes/attendance.route.js'
+import statsRoute from './routes/stats.route.js'
+import progressRoute from './routes/progress.route.js'
   
 app.use("/healthcheck",healthcheckRouter)
 app.use("/upload",uploadsRoute)
@@ -86,6 +108,8 @@ app.use("/api/v1/notices", noticesPublicRoute)
 app.use("/api/v1/submissions", submissionsRoute)
 app.use("/api/v1/meetings", meetingRoute)
 app.use("/api/v1/attendance", attendanceRoute)
+app.use("/api/v1", statsRoute)
+app.use("/api/v1/progress", progressRoute)
 
 app.get('/',(req,res)=>{
     res.status(200).send("welcome to DigLibrary")

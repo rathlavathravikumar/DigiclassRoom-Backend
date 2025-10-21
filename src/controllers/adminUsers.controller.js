@@ -44,3 +44,31 @@ export const listUsers = asyncHandler(async (req, res) => {
   ]);
   return res.status(200).json(new Apiresponse(200, { teachers, students }, "OK"));
 });
+
+export const deleteUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { role } = req.query;
+  
+  if (!userId || !role) {
+    throw new ApiErrorResponse(400, "User ID and role are required");
+  }
+  
+  if (!["teacher", "student"].includes(role)) {
+    throw new ApiErrorResponse(400, "Invalid role. Must be 'teacher' or 'student'");
+  }
+  
+  const adminFilter = { _id: userId, admin_id: req.user?._id };
+  
+  let deletedUser;
+  if (role === "teacher") {
+    deletedUser = await Teacher.findOneAndDelete(adminFilter);
+  } else {
+    deletedUser = await Student.findOneAndDelete(adminFilter);
+  }
+  
+  if (!deletedUser) {
+    throw new ApiErrorResponse(404, "User not found or you don't have permission to delete this user");
+  }
+  
+  return res.status(200).json(new Apiresponse(200, { deletedUser: { _id: deletedUser._id, name: deletedUser.name, email: deletedUser.email } }, "User deleted successfully"));
+});

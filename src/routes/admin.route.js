@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createNotice, listNotices, deleteNotice } from "../controllers/notice.controller.js";
 import { adminRegister, adminLogin, adminLogout, adminRefresh } from "../controllers/adminAuth.controller.js";
 import { authenticate, authorizeRoles } from "../middlewares/authorizeRoles.middleware.js";
-import { createTeacher, createStudent, listUsers } from "../controllers/adminUsers.controller.js";
+import { createTeacher, createStudent, listUsers, deleteUser } from "../controllers/adminUsers.controller.js";
 import { getTimetable, setTimetable } from "../controllers/timetable.controller.js";
 
 const router = Router();
@@ -20,6 +20,7 @@ router.delete("/notices/:id", authenticate, authorizeRoles("admin"), deleteNotic
 router.post("/users/teacher", authenticate, authorizeRoles("admin"), createTeacher);
 router.post("/users/student", authenticate, authorizeRoles("admin"), createStudent);
 router.get("/users", authenticate, authorizeRoles("admin"), listUsers);
+router.delete("/users/:userId", authenticate, authorizeRoles("admin"), deleteUser);
 
 // Timetable
 router.get("/timetable", authenticate, authorizeRoles("admin"), getTimetable);
