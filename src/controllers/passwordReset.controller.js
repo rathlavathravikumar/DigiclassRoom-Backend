@@ -5,7 +5,7 @@ import { Student } from '../models/student.model.js';
 import { ApiErrorResponse } from '../utils/ApiErrorResponse.js';
 import { Apiresponse } from '../utils/Apiresponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-
+import { sendEmail } from '../services/mailService.js';
 // Get the appropriate model based on role
 const getModelByRole = (role) => {
   switch (role) {
@@ -40,7 +40,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   // Generate reset token
   const resetToken = crypto.randomBytes(32).toString('hex');
-  const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+  const resetTokenExpiry = new Date(Date.now() + 15*60* 1000); // 1 hour from now
 
   // Save reset token to user
   user.passwordResetToken = resetToken;
@@ -53,9 +53,20 @@ const forgotPassword = asyncHandler(async (req, res) => {
   try {
     // TODO: Send email with reset link
     // For now, we'll just return success with the reset URL for development
-    console.log('Password reset requested for:', email);
-    console.log('Reset URL:', resetUrl);
-    console.log('Reset Token:', resetToken);
+  
+
+const mail={
+  from : process.env.EMAIL_USER,
+  to : user.email,
+  subject : "reset your password ",
+  text : `reset your password throught the given link ${resetUrl}`,
+}
+
+sendEmail(mail).catch(console.error);
+
+    // console.log('Password reset requested for:', email);
+    // console.log('Reset URL:', resetUrl);
+    // console.log('Reset Token:', resetToken);
 
     return res.status(200).json(
       new Apiresponse(200, {

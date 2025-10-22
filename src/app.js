@@ -4,44 +4,26 @@ import { errorHandler } from './middlewares/error.middleware.js'
 
 const app=express()
 
-const ORIGINS_ENV = process.env.CORS_ORIGIN || process.env.cors_ORIGIN || '';
 const DEFAULT_ORIGINS = [
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
   'http://localhost:8080',
   'http://127.0.0.1:8080',
   'http://localhost:8081',
   'http://127.0.0.1:8081',
   'http://localhost:8084',
   'http://127.0.0.1:8084',
-  'http://localhost:8085',
-  'http://127.0.0.1:8085',
-  'http://127.0.0.1:42709',
-  'http://localhost:42709',
-  'http://127.0.0.1:41491',
-  'http://localhost:41491',
-  'http://127.0.0.1:38017',
-  'http://localhost:38017',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-  'http://10.44.155.221:8082',
+  'http://10.44.155.11:8080'
 ];
-const ORIGIN_LIST = (
-  ORIGINS_ENV
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-);
-
-const ALLOWED_ORIGINS = ORIGIN_LIST.length ? ORIGIN_LIST : DEFAULT_ORIGINS;
+const ENV_ORIGINS = (process.env.CORS_ORIGIN || process.env.cors_ORIGIN || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const ALLOWED_ORIGINS = ENV_ORIGINS.length ? ENV_ORIGINS : DEFAULT_ORIGINS;
 
 app.use(cors({
-  origin: function (origin, callback) {
+  origin(origin, callback) {
     console.log('CORS request from origin:', origin);
     console.log('Allowed origins:', ALLOWED_ORIGINS);
-    
-    if (!origin) return callback(null, true);
-    if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
       return callback(null, true);
     }
     console.log('Origin not allowed:', origin);
