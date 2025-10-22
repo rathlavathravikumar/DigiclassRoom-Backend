@@ -17,7 +17,7 @@ const authenticate = (req, res, next) => {
 
     const payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     console.log('Token payload:', payload);
-    req.user = { _id: payload._id, role: payload.role };
+    req.user = { _id: payload._id, role: payload.role, admin_id: payload.admin_id };
     console.log('Authenticated user:', req.user);
     return next();
   } catch (err) {

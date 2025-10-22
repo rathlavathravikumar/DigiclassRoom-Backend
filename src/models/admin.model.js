@@ -35,6 +35,12 @@ const adminSchema=new Schema({
     },
     refreshToken :{
         type : String,
+    },
+    passwordResetToken: {
+        type: String,
+    },
+    passwordResetExpiry: {
+        type: Date,
     }
 }, {timestamps :true}
 )

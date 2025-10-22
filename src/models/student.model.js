@@ -43,6 +43,12 @@ const studentSchema=new Schema({
     },
     refreshToken :{
         type : String,
+    },
+    passwordResetToken: {
+        type: String,
+    },
+    passwordResetExpiry: {
+        type: Date,
     }
 }, {timestamps :true}
 )
@@ -63,7 +69,8 @@ studentSchema.methods.generateAccessToken=function(){
     return jwt.sign(
         {
         _id:this._id,
-        role: "student"
+        role: "student",
+        admin_id: this.admin_id
         },
 
         process.env.ACCESS_TOKEN_SECRET,
@@ -74,7 +81,8 @@ studentSchema.methods.generateRefreshToken=function(){
     return jwt.sign(
         {
             _id: this._id,
-            role : "student"
+            role : "student",
+            admin_id: this.admin_id
         },
         process.env.REFRESH_TOKEN_SECRET,
         {expiresIn:process.env.REFRESH_TOKEN_EXPIRY}
