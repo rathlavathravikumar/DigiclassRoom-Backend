@@ -24,6 +24,7 @@ const DEFAULT_ORIGINS = [
   'http://localhost:38017',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
+  'http://10.44.155.221:8082',
 ];
 const ORIGIN_LIST = (
   ORIGINS_ENV
