@@ -7,6 +7,7 @@ import { Apiresponse } from "../utils/Apiresponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import meetingService from "../services/meetingService.js";
 import mongoose from "mongoose";
+import { createBulkNotifications } from "./notification.controller.js";
 
 // Resolve the tenant adminId based on the requester role
 const resolveAdminId = async (req) => {
@@ -99,7 +100,8 @@ const createMeeting = asyncHandler(async (req, res) => {
     meeting_link: meetingDetails.meeting_link,
     meeting_id: meetingDetails.meeting_id,
     meeting_password: meetingDetails.meeting_password || "",
-    provider: meetingDetails.provider || 'zoom',
+    provider: meetingDetails.provider || 'jitsi',
+    room_name: meetingDetails.room_name || "",
     attendees: course.students || [],
     admin_id: adminId
   });
@@ -109,6 +111,26 @@ const createMeeting = asyncHandler(async (req, res) => {
     .populate('course_id', 'name code')
     .populate('teacher_id', 'name email')
     .populate('attendees', 'name email clg_id');
+
+  // Notify all students in the course about the new meeting
+  if (course.students && course.students.length > 0) {
+    const notifications = course.students.map(studentId => ({
+      recipient_id: studentId._id,
+      recipient_type: 'Student',
+      type: 'meeting',
+      title: 'New Meeting Scheduled',
+      message: `A new meeting "${title}" has been scheduled for ${course.name} on ${scheduledDate.toLocaleString()}`,
+      related_id: meeting._id,
+      related_name: title,
+      metadata: { 
+        meetingLink: meeting.meeting_link, 
+        scheduledTime: scheduledDate,
+        courseName: course.name
+      },
+      admin_id: adminId
+    }));
+    await createBulkNotifications(notifications);
+  }
 
   return res.status(201).json(new Apiresponse(201, populatedMeeting, "Meeting created successfully"));
 });
@@ -290,10 +312,8 @@ const deleteMeeting = asyncHandler(async (req, res) => {
     throw new ApiErrorResponse(404, "Meeting not found or access denied");
   }
 
-  // Cancel the meeting in the external service
-  if (meeting.provider && meeting.provider !== 'jitsi') {
-    await meetingService.deleteMeeting(meeting.meeting_id, meeting.provider);
-  }
+  // Cancel the meeting in the service (Jitsi rooms auto-cleanup)
+  await meetingService.deleteMeeting(meeting.meeting_id);
 
   // Update status to cancelled instead of deleting
   meeting.status = 'cancelled';
@@ -388,6 +408,14 @@ const getUpcomingMeetings = asyncHandler(async (req, res) => {
   return res.status(200).json(new Apiresponse(200, enrichedMeetings, "Upcoming meetings retrieved successfully"));
 });
 
+/**
+ * Get Jitsi configuration for frontend
+ */
+const getJitsiConfig = asyncHandler(async (req, res) => {
+  const config = meetingService.getJitsiConfig();
+  return res.status(200).json(new Apiresponse(200, config, "Jitsi configuration retrieved successfully"));
+});
+
 export {
   createMeeting,
   listMeetings,
@@ -395,5 +423,6 @@ export {
   updateMeeting,
   deleteMeeting,
   joinMeeting,
-  getUpcomingMeetings
+  getUpcomingMeetings,
+  getJitsiConfig
 };

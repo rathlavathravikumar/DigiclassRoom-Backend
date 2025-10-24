@@ -1,7 +1,10 @@
 import { Submission } from "../models/submissions.model.js";
+import { Assignment } from "../models/assignment.model.js";
+import { Student } from "../models/student.model.js";
 import { ApiErrorResponse } from "../utils/ApiErrorResponse.js";
 import { Apiresponse } from "../utils/Apiresponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { createNotification } from "./notification.controller.js";
 
 // Student submits assignment/test
 const createOrUpdateSubmission = asyncHandler(async (req, res) => {
@@ -14,6 +17,27 @@ const createOrUpdateSubmission = asyncHandler(async (req, res) => {
     { $set: update },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
+  
+  // Notify teacher about assignment submission
+  if (type === 'assignment') {
+    const assignment = await Assignment.findById(ref_id).select('teacher_id title').lean();
+    const student = await Student.findById(student_id).select('name admin_id').lean();
+    
+    if (assignment && student && assignment.teacher_id) {
+      await createNotification({
+        recipient_id: assignment.teacher_id,
+        recipient_type: 'Teacher',
+        type: 'submission',
+        title: 'Assignment Submitted',
+        message: `${student.name} has submitted the assignment "${assignment.title}"`,
+        related_id: ref_id,
+        related_name: assignment.title,
+        metadata: { studentName: student.name },
+        admin_id: student.admin_id
+      });
+    }
+  }
+  
   return res.status(200).json(new Apiresponse(200, doc, "Submitted"));
 });
 

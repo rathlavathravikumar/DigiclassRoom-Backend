@@ -67,8 +67,12 @@ const meetingSchema = new Schema(
     },
     provider: {
       type: String,
-      enum: ['jitsi', 'zoom', 'googlemeet', 'teams'],
-      default: 'zoom'
+      enum: ['jitsi'],
+      default: 'jitsi'
+    },
+    room_name: {
+      type: String,
+      default: ""
     },
     status: {
       type: String,

@@ -1,7 +1,11 @@
 import { Marks } from "../models/marks.model.js";
+import { Assignment } from "../models/assignment.model.js";
+import { Test } from "../models/tests.model.js";
+import { Student } from "../models/student.model.js";
 import { ApiErrorResponse } from "../utils/ApiErrorResponse.js";
 import { Apiresponse } from "../utils/Apiresponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { createNotification } from "./notification.controller.js";
 
 const upsertMarks = asyncHandler(async (req, res) => {
   const { type, ref_id, student_id, score, max_score, remarks, course_id } = req.body || {};
@@ -15,6 +19,32 @@ const upsertMarks = asyncHandler(async (req, res) => {
     { $set: { type, ref_id, student_id, score, max_score, remarks: remarks || "", course_id: course_id || undefined, teacher_id } },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
+  
+  // Notify student about their grade
+  const student = await Student.findById(student_id).select('admin_id').lean();
+  let itemName = '';
+  
+  if (type === 'assignment') {
+    const assignment = await Assignment.findById(ref_id).select('title').lean();
+    itemName = assignment?.title || 'Assignment';
+  } else if (type === 'test') {
+    const test = await Test.findById(ref_id).select('title').lean();
+    itemName = test?.title || 'Test';
+  }
+  
+  if (student) {
+    await createNotification({
+      recipient_id: student_id,
+      recipient_type: 'Student',
+      type: 'grade',
+      title: 'New Grade Posted',
+      message: `Your ${type} "${itemName}" has been graded. Score: ${score}/${max_score}${remarks ? '. ' + remarks : ''}`,
+      related_id: ref_id,
+      related_name: itemName,
+      metadata: { score, maxScore: max_score, remarks },
+      admin_id: student.admin_id
+    });
+  }
 
   return res.status(200).json(new Apiresponse(200, doc, "Marks saved"));
 });

@@ -7,10 +7,19 @@ import {
   updateMeeting,
   deleteMeeting,
   joinMeeting,
-  getUpcomingMeetings
+  getUpcomingMeetings,
+  getJitsiConfig
 } from "../controllers/meeting.controller.js";
 
 const router = Router();
+
+// Get Jitsi configuration
+router.get(
+  "/config/jitsi",
+  authenticate,
+  authorizeRoles("admin", "teacher", "student"),
+  getJitsiConfig
+);
 
 // Get upcoming meetings for dashboard
 router.get(

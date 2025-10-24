@@ -7,6 +7,7 @@ import mongoose, { Schema } from "mongoose";
   due_date: Date
   course_id: ObjectId(Course)
   teacher_id: ObjectId(Teacher)
+  total_marks: number (default: 100)
 } */
 
 const assignmentSchema = new Schema(
@@ -16,6 +17,7 @@ const assignmentSchema = new Schema(
     due_date: { type: Date, required: true },
     course_id: { type: Schema.Types.ObjectId, ref: "Course", required: true },
     teacher_id: { type: Schema.Types.ObjectId, ref: "Teacher", required: true },
+    total_marks: { type: Number, default: 100 },
   },
   { timestamps: true }
 );

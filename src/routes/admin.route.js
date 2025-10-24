@@ -4,6 +4,7 @@ import { adminRegister, adminLogin, adminLogout, adminRefresh } from "../control
 import { authenticate, authorizeRoles } from "../middlewares/authorizeRoles.middleware.js";
 import { createTeacher, createStudent, listUsers, deleteUser } from "../controllers/adminUsers.controller.js";
 import { getTimetable, setTimetable } from "../controllers/timetable.controller.js";
+import { updateAdminProfile } from "../controllers/profile.controller.js";
 
 const router = Router();
 
@@ -29,5 +30,7 @@ router.put("/timetable", authenticate, authorizeRoles("admin"), setTimetable);
 router.get("/me", authenticate, authorizeRoles("admin"), (req, res) => {
   res.status(200).json({ statusCode: 200, data: { user: req.user }, message: "OK" });
 });
+
+router.patch("/profile", authenticate, authorizeRoles("admin"), updateAdminProfile);
 
 export default router;

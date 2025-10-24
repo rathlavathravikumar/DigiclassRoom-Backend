@@ -229,16 +229,32 @@ export const getCourseProgress = asyncHandler(async (req, res) => {
 // Admin Progress Dashboard - Get overall progress for any course
 export const getAdminCourseProgress = asyncHandler(async (req, res) => {
   const { courseId } = req.params;
+  const adminId = req.user?._id;
 
-  // Get course details with teacher and students
-  const course = await Course.findById(courseId)
+  // Get course details with teacher and students - verify it belongs to this admin
+  let course = await Course.findOne({ _id: courseId, admin_id: adminId })
     .populate('teacher_id', 'name email')
     .populate('students', 'name email clg_id')
     .lean();
 
+  // Fallback: If not found with admin_id, try without it (for backward compatibility)
+  if (!course) {
+    console.log(`[Admin Progress] Course ${courseId} not found with admin_id=${adminId}, trying without filter...`);
+    course = await Course.findById(courseId)
+      .populate('teacher_id', 'name email')
+      .populate('students', 'name email clg_id')
+      .lean();
+    
+    if (course) {
+      console.log(`[Admin Progress] WARNING: Course found but has admin_id=${course.admin_id}. Run 'node fix-course-admin.js' to fix.`);
+    }
+  }
+
   if (!course) {
     throw new ApiErrorResponse(404, "Course not found");
   }
+  
+  console.log(`[Admin Progress] Getting progress for course: ${course.name} (${courseId})`);
 
   // Get all marks for this course with aggregation
   const progressStats = await Marks.aggregate([
@@ -323,10 +339,35 @@ export const getAdminCourseProgress = asyncHandler(async (req, res) => {
 
 // Get all courses for admin progress dashboard
 export const getAdminCoursesOverview = asyncHandler(async (req, res) => {
-  const courses = await Course.find({})
+  const adminId = req.user?._id;
+  
+  console.log(`[Admin Progress] Admin ID: ${adminId} requesting courses overview`);
+  
+  // Try to get courses for this admin's institution
+  let courses = await Course.find({ admin_id: adminId })
     .populate('teacher_id', 'name email')
     .lean();
+  
+  console.log(`[Admin Progress] Found ${courses.length} courses with admin_id=${adminId}`);
+  
+  // Fallback: If no courses found with admin_id, check if there are ANY courses
+  if (courses.length === 0) {
+    const totalCourses = await Course.countDocuments();
+    console.log(`[Admin Progress] No courses found for admin. Total courses in DB: ${totalCourses}`);
+    
+    if (totalCourses > 0) {
+      console.log(`[Admin Progress] WARNING: Found ${totalCourses} courses but none have admin_id=${adminId}`);
+      console.log(`[Admin Progress] Showing all courses as fallback. Run 'node fix-course-admin.js' to fix this.`);
+      
+      // Show all courses as fallback
+      courses = await Course.find({})
+        .populate('teacher_id', 'name email')
+        .lean();
+    }
+  }
 
+  console.log(`[Admin Progress] Processing ${courses.length} courses for stats`);
+  
   const coursesWithStats = await Promise.all(courses.map(async (course) => {
     const studentCount = course.students?.length || 0;
     const marksCount = await Marks.countDocuments({ course_id: course._id });
@@ -350,7 +391,8 @@ export const getAdminCoursesOverview = asyncHandler(async (req, res) => {
     ]);
 
     return {
-      id: course._id,
+      _id: course._id,
+      id: course._id, // Include both for compatibility
       name: course.name,
       code: course.code,
       teacher: course.teacher_id,

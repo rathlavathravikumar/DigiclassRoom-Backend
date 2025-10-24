@@ -78,6 +78,7 @@ import attendanceRoute from './routes/attendance.route.js'
 import statsRoute from './routes/stats.route.js'
 import progressRoute from './routes/progress.route.js'
 import passwordResetRoute from './routes/passwordReset.route.js'
+import notificationRoute from './routes/notification.route.js'
   
 app.use("/healthcheck",healthcheckRouter)
 app.use("/upload",uploadsRoute)
@@ -95,6 +96,7 @@ app.use("/api/v1/attendance", attendanceRoute)
 app.use("/api/v1", statsRoute)
 app.use("/api/v1/progress", progressRoute)
 app.use("/api/v1/auth", passwordResetRoute)
+app.use("/api/v1/notifications", notificationRoute)
 
 app.get('/',(req,res)=>{
     res.status(200).send("welcome to DigLibrary")

@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+#pocektFlow and pocketFlow2
+PocektFlow/
+pocketflow-env/

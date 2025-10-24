@@ -1,6 +1,9 @@
 import { Notice } from "../models/notice.model.js";
+import { Teacher } from "../models/teacher.model.js";
+import { Student } from "../models/student.model.js";
 import { ApiErrorResponse } from "../utils/ApiErrorResponse.js";
 import { Apiresponse } from "../utils/Apiresponse.js";
+import { createBulkNotifications } from "./notification.controller.js";
 
 const createNotice = async (req, res) => {
   try {
@@ -26,6 +29,48 @@ const createNotice = async (req, res) => {
     });
 
     console.log('Notice created successfully:', notice._id);
+    
+    // Send notifications to targeted users
+    const notifications = [];
+    
+    if (target === 'all' || target === 'teachers') {
+      const teachers = await Teacher.find({ admin_id: adminId }).select('_id').lean();
+      teachers.forEach(teacher => {
+        notifications.push({
+          recipient_id: teacher._id,
+          recipient_type: 'Teacher',
+          type: 'announcement',
+          title: `New Notice: ${title}`,
+          message: content.substring(0, 200) + (content.length > 200 ? '...' : ''),
+          related_id: notice._id,
+          related_name: title,
+          metadata: { priority },
+          admin_id: adminId
+        });
+      });
+    }
+    
+    if (target === 'all' || target === 'students') {
+      const students = await Student.find({ admin_id: adminId }).select('_id').lean();
+      students.forEach(student => {
+        notifications.push({
+          recipient_id: student._id,
+          recipient_type: 'Student',
+          type: 'announcement',
+          title: `New Notice: ${title}`,
+          message: content.substring(0, 200) + (content.length > 200 ? '...' : ''),
+          related_id: notice._id,
+          related_name: title,
+          metadata: { priority },
+          admin_id: adminId
+        });
+      });
+    }
+    
+    if (notifications.length > 0) {
+      await createBulkNotifications(notifications);
+    }
+    
     return res.status(201).json(new Apiresponse(201, notice, "Notice created successfully"));
   } catch (error) {
     console.error("Failed to create notice:", error);

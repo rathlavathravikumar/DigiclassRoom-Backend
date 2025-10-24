@@ -5,7 +5,7 @@ import {
   resetPassword,
   changePassword
 } from '../controllers/passwordReset.controller.js';
-import { authorizeRoles } from '../middlewares/authorizeRoles.middleware.js';
+import { authenticate, authorizeRoles } from '../middlewares/authorizeRoles.middleware.js';
 
 const router = Router();
 
@@ -15,6 +15,6 @@ router.get('/verify-token', verifyResetToken);
 router.post('/reset-password', resetPassword);
 
 // Protected route (authentication required)
-router.post('/change-password', authorizeRoles(['admin', 'teacher', 'student']), changePassword);
+router.post('/change-password', authenticate, authorizeRoles('admin', 'teacher', 'student'), changePassword);
 
 export default router;
